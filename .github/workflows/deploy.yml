@@ -20,6 +20,16 @@ jobs:
       run: |
         GOOS=linux GOARCH=amd64 go build -o helpdesk_app main.go
 
+    - name: Prepare Target Directory
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USERNAME }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        script: |
+          sudo mkdir -p /var/www/helpdesk
+          sudo chown -R $USER:$USER /var/www/helpdesk
+
     - name: Deploy to VM via SSH
       uses: appleboy/scp-action@v0.1.7
       with:
