@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Helpdesk Kanban (With Create Ticket)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #F4F5F7; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .kanban-board { display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 1rem; height: calc(100vh - 180px); }
+        .kanban-col { background-color: #EBECF0; border-radius: 8px; min-width: 300px; width: 300px; display: flex; flex-direction: column; }
+        .kanban-col-header { padding: 12px 16px; font-weight: 600; font-size: 13px; text-transform: uppercase; color: #5E6C84; }
+        .kanban-cards { flex: 1; padding: 0 8px 12px 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 100px; }
+        .kanban-cards.drag-over { background-color: #DFE1E6; border: 2px dashed #4C9AFF; }
+        .jira-card { background: white; border-radius: 4px; padding: 10px; box-shadow: 0 1px 0 rgba(9, 30, 66, 0.25); border-left: 4px solid transparent; cursor: grab; }
+        .border-open { border-left-color: #9CA3AF; }
+        .border-assigned { border-left-color: #F59E0B; }
+        .border-progress { border-left-color: #3B82F6; }
+        .border-resolved { border-left-color: #10B981; }
+    </style>
+</head>
+<body class="text-slate-700 h-screen flex flex-col overflow-hidden">
+
+    <div id="loginScreen" class="absolute inset-0 bg-[#F4F5F7] z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
+            <h1 class="text-2xl font-bold text-slate-800 text-center mb-6">Service Desk Login</h1>
+            <div class="space-y-3">
+                <button onclick="login('user1')" class="w-full p-3 bg-slate-50 hover:bg-slate-100 border rounded-lg flex items-center gap-3">
+                    <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">U</div>
+                    <div class="text-left"><p class="font-bold text-sm">End User (Requester)</p></div>
+                </button>
+                <button onclick="login('admin1')" class="w-full p-3 bg-slate-50 hover:bg-slate-100 border rounded-lg flex items-center gap-3">
+                    <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold">A</div>
+                    <div class="text-left"><p class="font-bold text-sm">Administrator</p></div>
+                </button>
+                <button onclick="login('tech1')" class="w-full p-3 bg-slate-50 hover:bg-slate-100 border rounded-lg flex items-center gap-3">
+                    <div class="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold">T</div>
+                    <div class="text-left"><p class="font-bold text-sm">Technical Support</p></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboardScreen" class="hidden flex-1 flex flex-col h-full">
+        <header class="bg-white shadow-sm px-6 py-3 flex justify-between items-center z-10">
+            <div class="flex items-center gap-6">
+                <h1 class="font-bold text-xl text-slate-800"><i class="fa-solid fa-square-kanban text-blue-600 mr-2"></i>Service Desk</h1>
+                <button id="btnCreateTicket" onclick="toggleModal(true)" class="hidden bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded font-medium text-sm transition">
+                    Create Ticket
+                </button>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-right border-r pr-4">
+                    <p id="userNameDisplay" class="text-sm font-bold text-slate-800">-</p>
+                    <p id="userRoleDisplay" class="text-xs text-slate-500">-</p>
+                </div>
+                <button onclick="location.reload()" class="text-slate-400 hover:text-red-500 transition"><i class="fa-solid fa-right-from-bracket text-xl"></i></button>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-hidden p-6">
+            <div class="kanban-board">
+                <div class="kanban-col">
+                    <div class="kanban-col-header">Open <span id="count-Open" class="ml-1 bg-slate-300 px-2 rounded-full text-xs text-slate-700">0</span></div>
+                    <div class="kanban-cards" id="col-Open" ondrop="drop(event, 'Open')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"></div>
+                </div>
+                <div class="kanban-col">
+                    <div class="kanban-col-header">Assigned <span id="count-Assigned" class="ml-1 bg-yellow-200 px-2 rounded-full text-xs text-yellow-800">0</span></div>
+                    <div class="kanban-cards" id="col-Assigned" ondrop="drop(event, 'Assigned')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"></div>
+                </div>
+                <div class="kanban-col">
+                    <div class="kanban-col-header">In Progress <span id="count-InProgress" class="ml-1 bg-blue-200 px-2 rounded-full text-xs text-blue-800">0</span></div>
+                    <div class="kanban-cards" id="col-InProgress" ondrop="drop(event, 'In Progress')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"></div>
+                </div>
+                <div class="kanban-col">
+                    <div class="kanban-col-header">Resolved <span id="count-Resolved" class="ml-1 bg-green-200 px-2 rounded-full text-xs text-green-800">0</span></div>
+                    <div class="kanban-cards" id="col-Resolved" ondrop="drop(event, 'Resolved')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="ticketModal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl max-w-md w-full overflow-hidden">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="font-bold text-lg text-slate-800">Create New Ticket</h2>
+                <button onclick="toggleModal(false)" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="ticketForm" class="p-4 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Issue Title</label>
+                    <input type="text" id="ticketTitle" required class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Cannot access email">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Category</label>
+                    <select id="ticketCategory" class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option>Technical Issue</option>
+                        <option>Access Request</option>
+                        <option>Hardware Replacement</option>
+                        <option>Software Installation</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="toggleModal(false)" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 rounded">Create Ticket</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            currentUser: null,
+            users: [
+                { id: "u1", username: "user1", role: "User", name: "John Doe" },
+                { id: "a1", username: "admin1", role: "Admin", name: "System Admin" },
+                { id: "t1", username: "tech1", role: "Tech Support", name: "Support Agent A" }
+            ],
+            tickets: [
+                { id: "TCK-1001", title: "Network Connectivity Issue", status: "Open", userId: "u1", techId: null },
+                { id: "TCK-1002", title: "Software License Renewal", status: "Assigned", userId: "u1", techId: "t1" }
+            ]
+        };
+
+        function login(username) {
+            state.currentUser = state.users.find(u => u.username === username);
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('dashboardScreen').classList.remove('hidden');
+            document.getElementById('userNameDisplay').innerText = state.currentUser.name;
+            document.getElementById('userRoleDisplay').innerText = state.currentUser.role;
+
+            // Tampilkan tombol Create hanya untuk User dan Admin
+            if(state.currentUser.role === 'User' || state.currentUser.role === 'Admin') {
+                document.getElementById('btnCreateTicket').classList.remove('hidden');
+            }
+
+            renderKanban();
+        }
+
+        function toggleModal(show) {
+            const modal = document.getElementById('ticketModal');
+            if(show) modal.classList.remove('hidden');
+            else modal.classList.add('hidden');
+        }
+
+        document.getElementById('ticketForm').onsubmit = function(e) {
+            e.preventDefault();
+            const title = document.getElementById('ticketTitle').value;
+            const newId = "TCK-" + (1000 + state.tickets.length + 1);
+            
+            state.tickets.push({
+                id: newId,
+                title: title,
+                status: "Open",
+                userId: state.currentUser.id,
+                techId: null
+            });
+
+            this.reset();
+            toggleModal(false);
+            renderKanban();
+        };
+
+        function getSafeId(status) { return status.replace(/\s+/g, ''); }
+
+        function renderKanban() {
+            ['Open', 'Assigned', 'In Progress', 'Resolved'].forEach(status => {
+                const safeId = getSafeId(status);
+                document.getElementById(`col-${safeId}`).innerHTML = '';
+                document.getElementById(`count-${safeId}`).innerText = '0';
+            });
+
+            state.tickets.forEach(t => {
+                let bColor = t.status === 'Open' ? 'border-open' : (t.status === 'Assigned' ? 'border-assigned' : (t.status === 'In Progress' ? 'border-progress' : 'border-resolved'));
+                let techName = t.techId ? state.users.find(u => u.id === t.techId).name : 'Unassigned';
+
+                const cardHTML = `
+                    <div id="${t.id}" class="jira-card ${bColor}" draggable="true" ondragstart="dragStart(event)">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-bold text-slate-400">${t.id}</span>
+                            <div class="w-5 h-5 rounded bg-slate-100 flex items-center justify-center text-[9px] font-bold text-slate-600" title="${techName}">
+                                ${techName !== 'Unassigned' ? techName.charAt(0) : '?'}
+                            </div>
+                        </div>
+                        <h4 class="text-sm text-slate-700 leading-tight">${t.title}</h4>
+                    </div>
+                `;
+                
+                const colContainer = document.getElementById(`col-${getSafeId(t.status)}`);
+                if(colContainer) {
+                    colContainer.innerHTML += cardHTML;
+                    const countEl = document.getElementById(`count-${getSafeId(t.status)}`);
+                    countEl.innerText = parseInt(countEl.innerText) + 1;
+                }
+            });
+        }
+
+        function dragStart(ev) {
+            const card = ev.target.closest('.jira-card');
+            const ticket = state.tickets.find(x => x.id === card.id);
+            const role = state.currentUser.role;
+
+            if (role === 'User') {
+                alert("❌ Akses Dibatasi: User hanya bisa membuat tiket, tidak bisa memindahkan status.");
+                ev.preventDefault();
+                return;
+            }
+
+            if (role === 'Tech Support' && ticket.techId !== state.currentUser.id) {
+                alert(`❌ Akses Ditolak: Tiket ini belum di-assign ke Anda.`);
+                ev.preventDefault();
+                return;
+            }
+
+            ev.dataTransfer.setData("ticketId", card.id);
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+            const col = ev.target.closest('.kanban-cards');
+            if(col) col.classList.add('drag-over');
+        }
+
+        function dragLeave(ev) {
+            const col = ev.target.closest('.kanban-cards');
+            if(col) col.classList.remove('drag-over');
+        }
+
+        function drop(ev, newStatus) {
+            ev.preventDefault();
+            document.querySelectorAll('.kanban-cards').forEach(c => c.classList.remove('drag-over'));
+            const ticketId = ev.dataTransfer.getData("ticketId");
+            const ticket = state.tickets.find(x => x.id === ticketId);
+            
+            if(ticket) {
+                ticket.status = newStatus;
+                renderKanban();
+            }
+        }
+    </script>
+</body>
+</html>
