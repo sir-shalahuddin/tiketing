@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Support Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .kanban-col {
+            background: #f1f5f9;
+            border-radius: 12px;
+            min-width: 320px;
+            height: 75vh;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            border-left: 4px solid #cbd5e1;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+
+        .card.dragging {
+            opacity: 0.5;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        .status-Open {
+            border-left-color: #94a3b8;
+        }
+
+        .status-Assigned {
+            border-left-color: #f59e0b;
+        }
+
+        .status-InProgress {
+            border-left-color: #3b82f6;
+        }
+
+        .status-Resolved {
+            border-left-color: #10b981;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800">
+
+    <div id="loader" class="fixed top-0 left-0 h-1 bg-blue-600 z-[200] w-0 transition-all"></div>
+
+    <div id="toast-container" class="fixed bottom-6 right-6 z-[300] flex flex-col gap-3 pointer-events-none"></div>
+
+    <div id="loginPage"
+        class="h-screen flex items-center justify-center bg-slate-900 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+        <div class="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-sm mx-4 transform transition-all">
+            <h1 class="text-3xl font-black text-indigo-600 mb-2 text-center tracking-tight">SUPPORT</h1>
+            <p class="text-xs text-slate-400 font-bold tracking-widest text-center mb-8 uppercase">PORTAL LOGIN</p>
+            <form onsubmit="event.preventDefault(); auth();">
+                <input type="text" id="logUser" placeholder="Username" required
+                    class="w-full border-2 border-slate-100 p-4 rounded-xl mb-4 outline-none focus:border-indigo-500 focus:ring-4 ring-indigo-50 transition text-sm font-medium">
+                <input type="password" id="logPass" placeholder="Password" required
+                    class="w-full border-2 border-slate-100 p-4 rounded-xl mb-6 outline-none focus:border-indigo-500 focus:ring-4 ring-indigo-50 transition text-sm font-medium">
+                <button type="submit"
+                    class="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 active:scale-95 transition shadow-lg shadow-indigo-200">LOGIN</button>
+            </form>
+
+            <div class="mt-8 pt-6 border-t border-slate-100">
+                <p class="text-[10px] text-slate-400 font-bold tracking-widest text-center mb-4 uppercase">Demo Accounts
+                </p>
+                <div class="flex flex-col gap-2">
+                    <button onclick="demoLogin('user', 'user123')"
+                        class="w-full bg-slate-100 text-slate-600 text-xs font-bold py-2.5 rounded-lg hover:bg-slate-200 transition">Login
+                        as User (Reporter)</button>
+                    <button onclick="demoLogin('admin', 'admin123')"
+                        class="w-full bg-slate-100 text-slate-600 text-xs font-bold py-2.5 rounded-lg hover:bg-slate-200 transition">Login
+                        as Admin (Assigner)</button>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="demoLogin('tech', 'tech123')"
+                            class="w-full bg-slate-100 text-slate-600 text-xs font-bold py-2.5 rounded-lg hover:bg-slate-200 transition">Login
+                            Tech 1</button>
+                        <button onclick="demoLogin('tech2', 'tech123')"
+                            class="w-full bg-slate-100 text-slate-600 text-xs font-bold py-2.5 rounded-lg hover:bg-slate-200 transition">Login
+                            Tech 2</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="appPage" class="hidden min-h-screen flex flex-col">
+        <header
+            class="bg-white border-b px-4 md:px-8 py-4 flex flex-col md:flex-row justify-between items-center shadow-sm sticky top-0 z-50 gap-4">
+            <div class="flex items-center gap-4 md:gap-8 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+                <span class="font-black text-xl md:text-2xl text-indigo-600 tracking-tighter whitespace-nowrap">SUPPORT
+                    PORTAL</span>
+                <nav class="flex gap-1 md:gap-2 bg-slate-100 p-1 rounded-xl shrink-0">
+                    <button onclick="setView('table')"
+                        class="v-btn px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap"
+                        data-v="table">TABLE</button>
+                    <button onclick="setView('kanban')"
+                        class="v-btn px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap"
+                        data-v="kanban">KANBAN</button>
+                    <button onclick="setView('users')" id="navUsers"
+                        class="hidden v-btn px-4 py-2 rounded-lg font-bold text-xs whitespace-nowrap"
+                        data-v="users">USERS</button>
+                </nav>
+            </div>
+            <div class="flex items-center gap-4 md:gap-6 justify-end w-full md:w-auto">
+                <button id="btnNewTicket" onclick="openModal('m-create')"
+                    class="bg-indigo-600 text-white px-4 md:px-5 py-2.5 rounded-lg font-bold text-xs md:text-sm shadow-md hover:scale-105 active:scale-95 transition whitespace-nowrap">+
+                    NEW TICKET</button>
+                <div class="text-right border-l pl-4 hidden md:block">
+                    <p id="meName" class="font-bold text-sm leading-none"></p>
+                    <p id="meRole" class="text-[10px] text-slate-400 uppercase font-black tracking-widest mt-1"></p>
+                </div>
+                <button onclick="logout()" class="text-slate-300 hover:text-red-500 transition p-2"><i
+                        class="fa-solid fa-power-off text-xl"></i></button>
+            </div>
+        </header>
+
+        <main class="p-4 md:p-8 flex-1">
+            <div id="v-kanban" class="flex gap-6 overflow-x-auto pb-4">
+                <div class="kanban-col" ondragover="allowDrop(event)" ondrop="drop(event, 'Open')">
+                    <h3 class="font-black text-slate-400 text-xs mb-4 pointer-events-none">OPEN</h3>
+                    <div id="k-Open" class="min-h-[50px]"></div>
+                </div>
+                <div class="kanban-col" ondragover="allowDrop(event)" ondrop="drop(event, 'Assigned')">
+                    <h3 class="font-black text-amber-500 text-xs mb-4 pointer-events-none">ASSIGNED</h3>
+                    <div id="k-Assigned" class="min-h-[50px]"></div>
+                </div>
+                <div class="kanban-col" ondragover="allowDrop(event)" ondrop="drop(event, 'InProgress')">
+                    <h3 class="font-black text-blue-500 text-xs mb-4 pointer-events-none">IN PROGRESS</h3>
+                    <div id="k-InProgress" class="min-h-[50px]"></div>
+                </div>
+                <div class="kanban-col" ondragover="allowDrop(event)" ondrop="drop(event, 'Resolved')">
+                    <h3 class="font-black text-emerald-500 text-xs mb-4 pointer-events-none">RESOLVED</h3>
+                    <div id="k-Resolved" class="min-h-[50px]"></div>
+                </div>
+            </div>
+
+            <!-- TABLE VIEW -->
+            <div id="v-table" class="hidden bg-white rounded-xl shadow-sm border overflow-hidden">
+                <div
+                    class="p-4 border-b bg-slate-50 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                    <h3 class="font-bold text-slate-700">Ticket List</h3>
+                    <select id="filterStatus" onchange="renderTickets(allTickets)"
+                        class="border p-2.5 rounded-lg text-xs font-bold text-slate-600 outline-none bg-white focus:ring-2 focus:ring-indigo-100">
+                        <option value="">All Status</option>
+                        <option value="Open">Open</option>
+                        <option value="Assigned">Assigned</option>
+                        <option value="InProgress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                    </select>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead
+                            class="bg-slate-50 text-slate-400 font-bold text-[10px] tracking-wider uppercase border-b">
+                            <tr>
+                                <th class="p-4">ID</th>
+                                <th class="p-4">Title</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4">Date</th>
+                                <th class="p-4 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="t-Tickets" class="divide-y cursor-pointer"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- USERS VIEW -->
+            <div id="v-users" class="hidden bg-white rounded-xl shadow-sm border overflow-hidden">
+                <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
+                    <h3 class="font-bold text-slate-700">User Management</h3>
+                    <button onclick="openModal('m-user')"
+                        class="bg-indigo-600 text-white px-4 py-2.5 rounded-lg font-bold text-xs shadow-md hover:bg-indigo-700 active:scale-95 transition">+
+                        ADD USER</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead
+                            class="bg-slate-50 text-slate-400 font-bold text-[10px] tracking-wider uppercase border-b">
+                            <tr>
+                                <th class="p-4">Name</th>
+                                <th class="p-4">Username</th>
+                                <th class="p-4">Role</th>
+                                <th class="p-4">Phone</th>
+                                <th class="p-4 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="t-Users" class="divide-y"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="m-create"
+        class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <form id="f_ticket" class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="p-6 border-b font-black text-slate-700">CREATE NEW TICKET</div>
+            <div class="p-6 space-y-4">
+                <input type="text" name="title" required placeholder="Issue Summary"
+                    class="w-full border-2 border-slate-100 p-3 rounded-lg outline-none focus:border-indigo-500 focus:ring-2 ring-indigo-50 transition font-medium">
+                <select name="type" required
+                    class="w-full border-2 border-slate-100 p-3 rounded-lg outline-none focus:border-indigo-500 focus:ring-2 ring-indigo-50 transition font-medium bg-white">
+                    <option value="" disabled selected>Select Ticket Type</option>
+                    <option value="Deployment">Deployment</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Troubleshoot">Troubleshoot</option>
+                </select>
+                <textarea name="description" required rows="4" placeholder="Detail description..."
+                    class="w-full border-2 border-slate-100 p-3 rounded-lg outline-none focus:border-indigo-500 focus:ring-2 ring-indigo-50 transition font-medium"></textarea>
+                <div>
+                    <label class="text-xs font-black text-slate-400 block mb-2">ATTACHMENT</label>
+                    <input type="file" name="attachment" class="text-xs">
+                </div>
+            </div>
+            <div class="p-6 bg-slate-50 flex justify-end gap-3">
+                <button type="button" onclick="closeModal('m-create')"
+                    class="text-slate-400 font-bold px-4">Cancel</button>
+                <button
+                    class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg shadow-blue-100">Submit</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- MODAL TICKET DETAIL -->
+    <div id="m-detail"
+        class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div class="p-6 border-b flex justify-between items-center bg-slate-50">
+                <div>
+                    <span id="dtlId" class="text-xs font-black text-slate-400"></span>
+                    <h2 id="dtlTitle" class="text-xl font-bold text-slate-800"></h2>
+                </div>
+                <span id="dtlStatus" class="px-3 py-1 rounded-full text-xs font-bold"></span>
+            </div>
+            <div class="p-6 space-y-6">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-50 p-3 rounded-lg border">
+                        <p class="text-[10px] font-black text-slate-400 mb-1">TYPE</p>
+                        <p id="dtlType" class="text-sm font-bold text-slate-700"></p>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-lg border">
+                        <p class="text-[10px] font-black text-slate-400 mb-1">CREATED DATE</p>
+                        <p id="dtlDate" class="text-sm font-bold text-slate-700"></p>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xs font-black text-slate-400 mb-2">DESCRIPTION</h3>
+                    <p id="dtlDesc"
+                        class="text-sm text-slate-600 bg-slate-50 p-4 rounded-lg border min-h-[80px] whitespace-pre-wrap">
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 border-t pt-4">
+                    <div>
+                        <h3 class="text-[10px] font-black text-slate-400 mb-1">REPORTER (USER)</h3>
+                        <p id="dtlUser" class="text-xs font-bold text-slate-700"></p>
+                    </div>
+                    <div>
+                        <h3 class="text-[10px] font-black text-slate-400 mb-1">ASSIGNEE (TECH)</h3>
+                        <p id="dtlTech" class="text-xs font-bold text-slate-700"></p>
+                    </div>
+                </div>
+
+                <div id="dtlAttachmentContainer" class="border-t pt-4 hidden">
+                    <h3 class="text-[10px] font-black text-slate-400 mb-2">ATTACHMENT</h3>
+                    <a id="dtlAttachment" href="#" target="_blank"
+                        class="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-100 transition">
+                        <i class="fa-solid fa-paperclip"></i> View File
+                    </a>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t flex justify-end">
+                <button onclick="closeModal('m-detail')"
+                    class="bg-slate-200 text-slate-600 px-6 py-2 rounded-lg font-bold hover:bg-slate-300 transition">Close</button>
+            </div>
+        </div>
+    </div>
+    <div id="m-user"
+        class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <form id="f_user" class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="p-6 border-b font-black text-slate-700">ADD NEW USER</div>
+            <div class="p-6 space-y-4">
+                <input type="text" name="name" required placeholder="Full Name"
+                    class="w-full border p-3 rounded-lg outline-none focus:ring-2 ring-indigo-500">
+                <input type="text" name="username" required placeholder="Username"
+                    class="w-full border p-3 rounded-lg outline-none focus:ring-2 ring-indigo-500">
+                <input type="password" name="password" required placeholder="Password"
+                    class="w-full border p-3 rounded-lg outline-none focus:ring-2 ring-indigo-500">
+                <select name="role"
+                    class="w-full border p-3 rounded-lg outline-none focus:ring-2 ring-indigo-500 bg-white">
+                    <option value="User">User</option>
+                    <option value="Admin">Admin</option>
+                    <option value="Tech">Tech Support</option>
+                </select>
+                <input type="text" name="phone" placeholder="Phone Number"
+                    class="w-full border p-3 rounded-lg outline-none focus:ring-2 ring-indigo-500">
+            </div>
+            <div class="p-6 bg-slate-50 flex justify-end gap-3">
+                <button type="button" onclick="closeModal('m-user')"
+                    class="text-slate-400 font-bold px-4">Cancel</button>
+                <button
+                    class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg shadow-indigo-100">Save</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let me = null;
+        let token = null;
+
+        // --- UTILS ---
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            let icon = type === 'success' ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-solid fa-circle-xmark"></i>';
+            let color = type === 'success' ? 'bg-emerald-500' : 'bg-red-500';
+
+            toast.className = `transform transition-all duration-300 translate-y-full opacity-0 ${color} text-white px-6 py-3 rounded-xl shadow-xl flex items-center gap-3 font-bold text-sm pointer-events-auto`;
+            toast.innerHTML = `${icon} <span>${escapeHtml(message)}</span>`;
+
+            container.appendChild(toast);
+
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-full', 'opacity-0');
+            });
+
+            // Remove after 3s
+            setTimeout(() => {
+                toast.classList.add('translate-y-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // --- GLOBAL API WRAPPER (The Fix) ---
+        async function api(url, options = {}) {
+            setLoading(true);
+            const headers = options.headers || {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            try {
+                const res = await fetch(url, { ...options, headers });
+                if (res.status === 401) {
+                    console.warn("Unauthorized! Logging out...");
+                    logout();
+                    throw new Error("Session expired");
+                }
+                setLoading(false);
+                return res;
+            } catch (err) {
+                setLoading(false);
+                throw err;
+            }
+        }
+
+        async function auth() {
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: logUser.value, password: logPass.value })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    me = data.user;
+                    token = data.token;
+                    localStorage.setItem('helpdesk_session', JSON.stringify({ me, token }));
+                    document.getElementById('logPass').value = '';
+                    showToast('Welcome back, ' + me.name + '!');
+                    setupDashboard();
+                } else { showToast("Invalid Credentials!", "error"); }
+            } catch (e) { showToast("Failed connecting to server", "error"); }
+        }
+
+        function demoLogin(u, p) {
+            document.getElementById('logUser').value = u;
+            document.getElementById('logPass').value = p;
+            auth();
+        }
+
+        function setupDashboard() {
+            loginPage.classList.add('hidden');
+            appPage.classList.remove('hidden');
+            meName.innerText = escapeHtml(me.name);
+            meRole.innerText = escapeHtml(me.role);
+
+            if (me.role === 'User') {
+                navUsers.classList.remove('hidden');
+                document.getElementById('btnNewTicket').classList.remove('hidden');
+            } else {
+                navUsers.classList.add('hidden');
+                document.getElementById('btnNewTicket').classList.add('hidden');
+            }
+
+            // Modernize: default to table view
+            setView('table');
+            loadAll();
+            loadUsers();
+        }
+
+        function checkSession() {
+            const saved = localStorage.getItem('helpdesk_session');
+            if (saved) {
+                const data = JSON.parse(saved);
+                me = data.me;
+                token = data.token;
+                setupDashboard();
+            } else {
+                loginPage.classList.remove('hidden');
+                appPage.classList.add('hidden');
+            }
+        }
+
+        let techs = [];
+        let allTickets = [];
+
+        async function loadAll() {
+            try {
+                if (me.role === 'Admin') {
+                    const uRes = await api('/api/users');
+                    const users = await uRes.json();
+                    techs = users.filter(u => u.role === 'Tech');
+                }
+                const tRes = await api('/api/tickets');
+                allTickets = await tRes.json() || [];
+                renderTickets(allTickets);
+            } catch (e) { }
+        }
+
+        async function updateTicket(id, field, value) {
+            let payload = { id: id };
+            if (field === 'tech_id') {
+                payload.tech_id = value;
+                payload.status = value ? 'Assigned' : 'Open';
+            } else if (field === 'status') {
+                payload.status = value;
+            }
+            const res = await api('/api/tickets', { method: 'PUT', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } });
+            if (res.ok) {
+                showToast("Ticket updated successfully!");
+                loadAll();
+            } else {
+                showToast("Failed to update ticket", "error");
+            }
+        }
+
+        function renderTickets(tickets) {
+            ['Open', 'Assigned', 'InProgress', 'Resolved'].forEach(s => document.getElementById('k-' + s).innerHTML = '');
+            let tableHTML = '';
+            const filterEl = document.getElementById('filterStatus');
+            const filterVal = filterEl ? filterEl.value : '';
+
+            tickets.forEach(t => {
+                const safeStatus = t.status.replace(/\s/g, '');
+
+                const safeTitle = escapeHtml(t.title);
+                const safeDesc = escapeHtml(t.description);
+                const safeUser = escapeHtml(t.user_name);
+                const safeTech = escapeHtml(t.tech_name);
+
+                let contactInfo = '';
+                if (me.role === 'Admin' || me.role === 'Tech') {
+                    contactInfo = `<div class="text-[10px] mt-2 text-slate-500 font-medium"><i class="fa-solid fa-user text-slate-400"></i> ${safeUser} (${escapeHtml(t.user_phone)})</div>`;
+                } else if (me.role === 'User' && safeTech) {
+                    contactInfo = `<div class="text-[10px] mt-2 text-slate-500 font-medium"><i class="fa-solid fa-headset text-indigo-400"></i> Tech: ${safeTech} (${escapeHtml(t.tech_phone)})</div>`;
+                }
+
+                let typeBadge = t.type ? `<span class="px-2 py-0.5 rounded-md text-[9px] font-bold bg-slate-100 text-slate-500 border">${escapeHtml(t.type)}</span>` : '';
+
+                let techOptions = `<option value="">Assign Tech...</option>`;
+                if (me.role === 'Admin') {
+                    techs.forEach(tech => {
+                        techOptions += `<option value="${tech.id}" ${t.tech_id === tech.id ? 'selected' : ''}>${tech.name}</option>`;
+                    });
+                }
+
+                let actionHtml = '';
+                let tableActionHtml = '';
+                if (me.role === 'Admin') {
+                    let select = `<select onclick="event.stopPropagation()" onchange="updateTicket('${t.id}', 'tech_id', this.value)" class="text-[10px] p-2 border-2 border-slate-100 rounded-lg bg-slate-50 w-full outline-none font-bold text-slate-600 focus:border-indigo-500 transition cursor-pointer">${techOptions}</select>`;
+                    actionHtml = `<div class="mt-3 pt-3 border-t flex items-center gap-2">${select}</div>`;
+                    tableActionHtml = select;
+                } else if (me.role === 'Tech' && t.tech_id === me.id) {
+                    let select = `<select onclick="event.stopPropagation()" onchange="updateTicket('${t.id}', 'status', this.value)" class="text-[10px] p-2 border-2 border-slate-100 rounded-lg bg-slate-50 w-full outline-none font-bold text-slate-600 focus:border-indigo-500 transition cursor-pointer">
+                                <option value="Assigned" ${t.status === 'Assigned' ? 'selected' : ''}>Assigned</option>
+                                <option value="InProgress" ${t.status === 'InProgress' ? 'selected' : ''}>In Progress</option>
+                                <option value="Resolved" ${t.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
+                            </select>`;
+                    actionHtml = `<div class="mt-3 pt-3 border-t flex items-center gap-2">${select}</div>`;
+                    tableActionHtml = select;
+                }
+
+                const card = `
+                    <div class="card status-${safeStatus} hover:-translate-y-0.5 transition-transform" 
+                         draggable="${me.role === 'Tech' || me.role === 'Admin'}" 
+                         ondragstart="drag(event, '${t.id}', '${safeStatus}', '${t.tech_id}')"
+                         onclick="showDetail('${t.id}')">
+                        <div class="flex justify-between items-baseline mb-2 gap-2">
+                            <span class="text-[10px] font-black text-slate-400">#${t.id}</span>
+                            ${typeBadge}
+                        </div>
+                        <h4 class="font-bold text-sm mb-1 text-slate-800 leading-tight">${safeTitle}</h4>
+                        <p class="text-xs text-slate-500 truncate mb-1">${safeDesc}</p>
+                        ${t.attachment_url ? `<div class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md font-bold inline-flex items-center gap-1 mb-1 mt-1"><i class="fa-solid fa-paperclip"></i> FILE</div>` : ''}
+                        ${contactInfo}
+                        <div onclick="event.stopPropagation()">${actionHtml}</div>
+                    </div>
+                `;
+                document.getElementById('k-' + safeStatus).innerHTML += card;
+
+                let statusColor = 'bg-slate-100 text-slate-600';
+                if (safeStatus === 'Open') statusColor = 'bg-slate-200 text-slate-700';
+                if (safeStatus === 'Assigned') statusColor = 'bg-amber-100 text-amber-700';
+                if (safeStatus === 'InProgress') statusColor = 'bg-blue-100 text-blue-700';
+                if (safeStatus === 'Resolved') statusColor = 'bg-emerald-100 text-emerald-700';
+
+                if (me.role === 'User') {
+                    // Stop propagation to avoid firing row click
+                    tableActionHtml += `<button onclick="event.stopPropagation(); deleteTicket('${t.id}');" class="text-slate-400 hover:text-red-500 hover:bg-red-50 w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow-sm bg-white border ml-2"><i class="fa-solid fa-trash"></i></button>`;
+                }
+
+                if (!filterVal || filterVal === safeStatus) {
+                    tableHTML += `
+                        <tr class="hover:bg-indigo-50/50 transition-colors group">
+                            <td class="p-4 align-top" onclick="showDetail('${t.id}')">
+                                <div class="font-mono text-[10px] text-slate-400 font-bold tracking-wider mb-1">#${t.id}</div>
+                                ${typeBadge}
+                            </td>
+                            <td class="p-4 align-top" onclick="showDetail('${t.id}')">
+                                <div class="font-bold text-sm text-slate-800 mb-1 leading-snug truncate max-w-[200px] md:max-w-xs">${safeTitle}</div>
+                                <div class="font-medium text-[11px] text-slate-500"><i class="fa-solid fa-user text-slate-300"></i> ${safeUser}</div>
+                            </td>
+                            <td class="p-4 align-top whitespace-nowrap" onclick="showDetail('${t.id}')">
+                                <span class="px-3 py-1 rounded-md text-[10px] font-bold ${statusColor} border shadow-sm">${t.status}</span>
+                            </td>
+                            <td class="p-4 align-top text-xs text-slate-500 font-medium whitespace-nowrap" onclick="showDetail('${t.id}')">
+                                ${new Date(t.created_at).toLocaleDateString()}
+                            </td>
+                            <td class="p-4 align-top flex items-center justify-end">
+                                ${tableActionHtml}
+                            </td>
+                        </tr>
+                    `;
+                }
+            });
+            document.getElementById('t-Tickets').innerHTML = tableHTML;
+        }
+
+        async function loadUsers() {
+            if (me.role !== 'User') return;
+            try {
+                const res = await api('/api/users');
+                const users = await res.json();
+                let html = '';
+                users.forEach(u => {
+                    html += `
+                        <tr class="hover:bg-indigo-50/50 transition-colors">
+                            <td class="p-4 font-bold text-sm text-slate-800">${escapeHtml(u.name)}</td>
+                            <td class="p-4 text-xs font-medium text-slate-500">@${escapeHtml(u.username)}</td>
+                            <td class="p-4 whitespace-nowrap"><span class="px-3 py-1 bg-slate-100 border shadow-sm rounded-md text-[10px] font-bold text-slate-600">${escapeHtml(u.role)}</span></td>
+                            <td class="p-4 text-xs font-medium text-slate-500">${escapeHtml(u.phone) || '-'}</td>
+                            <td class="p-4 text-right">
+                                ${u.username !== 'admin' && u.username !== 'user' && u.username !== me.username ? `<button onclick="deleteUser('${u.id}')" class="text-slate-400 hover:text-red-500 hover:bg-red-50 w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow-sm bg-white border inline-flex"><i class="fa-solid fa-trash"></i></button>` : ''}
+                            </td>
+                        </tr>
+                    `;
+                });
+                document.getElementById('t-Users').innerHTML = html;
+            } catch (e) { }
+        }
+
+        f_ticket.onsubmit = async (e) => {
+            e.preventDefault();
+            const fd = new FormData(f_ticket);
+            try {
+                const res = await api('/api/tickets', { method: 'POST', body: fd });
+                if (res.ok) {
+                    closeModal('m-create');
+                    f_ticket.reset();
+                    showToast('Ticket submitted successfully!');
+                    loadAll();
+                } else {
+                    showToast('Failed to create ticket', 'error');
+                }
+            } catch (e) {
+                showToast('Network error', 'error');
+            }
+        };
+
+        if (document.getElementById('f_user')) {
+            document.getElementById('f_user').onsubmit = async (e) => {
+                e.preventDefault();
+                const fd = new FormData(document.getElementById('f_user'));
+                const payload = Object.fromEntries(fd.entries());
+                try {
+                    const res = await api('/api/users', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } });
+                    if (res.ok) {
+                        closeModal('m-user');
+                        document.getElementById('f_user').reset();
+                        showToast('User created successfully!');
+                        loadUsers();
+                    } else {
+                        showToast('Failed to create user', 'error');
+                    }
+                } catch (e) { showToast('Network error', 'error'); }
+            };
+        }
+
+        async function deleteTicket(id) {
+            if (!confirm('Delete this ticket?')) return;
+            const res = await api(`/api/tickets?id=${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                showToast("Ticket deleted");
+                loadAll();
+            } else { showToast("Failed deleting ticket", "error"); }
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('Delete this user?')) return;
+            const res = await api(`/api/users?id=${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                showToast("User deleted");
+                loadUsers();
+            } else { showToast("Failed deleting user", "error"); }
+        }
+
+        function showDetail(id) {
+            const t = allTickets.find(x => x.id === id);
+            if (!t) return;
+
+            document.getElementById('dtlId').innerText = '#' + t.id;
+            document.getElementById('dtlTitle').innerText = t.title;
+
+            // XSS Safe Injection
+            const safeDesc = escapeHtml(t.description);
+
+            const statusEl = document.getElementById('dtlStatus');
+            statusEl.innerText = t.status;
+            statusEl.className = 'px-3 py-1 rounded-md text-[10px] tracking-wider font-bold border shadow-sm ';
+            if (t.status === 'Open') statusEl.className += 'bg-slate-200 text-slate-700';
+            else if (t.status === 'Assigned') statusEl.className += 'bg-amber-100 text-amber-700 border-amber-200';
+            else if (t.status === 'InProgress') statusEl.className += 'bg-blue-100 text-blue-700 border-blue-200';
+            else if (t.status === 'Resolved') statusEl.className += 'bg-emerald-100 text-emerald-700 border-emerald-200';
+
+            document.getElementById('dtlType').innerText = t.type || '-';
+            document.getElementById('dtlDate').innerText = new Date(t.created_at).toLocaleDateString() + ' ' + new Date(t.created_at).toLocaleTimeString();
+            document.getElementById('dtlDesc').innerHTML = safeDesc;
+
+            document.getElementById('dtlUser').innerText = t.user_name ? `${t.user_name} (${t.user_phone})` : '-';
+            document.getElementById('dtlTech').innerText = t.tech_name ? `${t.tech_name} (${t.tech_phone})` : 'Unassigned';
+
+            const attBox = document.getElementById('dtlAttachmentContainer');
+            if (t.attachment_url) {
+                attBox.classList.remove('hidden');
+                document.getElementById('dtlAttachment').href = t.attachment_url;
+            } else {
+                attBox.classList.add('hidden');
+            }
+
+            openModal('m-detail');
+        }
+
+        // DRAG & DROP LOGIC
+        function drag(ev, id, currentStatus, techId) {
+            ev.dataTransfer.setData("ticketId", id);
+            ev.dataTransfer.setData("currentStatus", currentStatus);
+            ev.dataTransfer.setData("techId", techId);
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+
+        async function drop(ev, newStatus) {
+            ev.preventDefault();
+            const id = ev.dataTransfer.getData("ticketId");
+            const currentStatus = ev.dataTransfer.getData("currentStatus");
+            const techId = ev.dataTransfer.getData("techId");
+
+            if (!id || currentStatus === newStatus) return;
+
+            // Optional front-end validation (Backend will also validate)
+            if (me.role !== 'Tech' && me.role !== 'Admin') {
+                showToast("Only Admins and Techs can update ticket progress on Kanban.", "error");
+                return;
+            }
+            if (me.role === 'Tech' && techId !== me.id) {
+                showToast("You can only move your own assigned tickets.", "error");
+                return;
+            }
+            if (me.role === 'Tech' && newStatus === 'Open') {
+                showToast("Techs cannot return tickets to Open pool directly.", "error");
+                return;
+            }
+
+            // Apply visual change immediately for snappiness
+            const dropzone = document.getElementById('k-' + newStatus);
+            // Re-render handled by API call
+
+            const payload = { id: id, status: newStatus };
+            if (me.role === 'Admin' && newStatus === 'Open') {
+                // To unassign, admin needs to clear tech_id. Backend triggers Unassign if tech_id is empty but status is provided.
+                // We'll use the existing updateTicket logic which handles this smoothly.
+                updateTicket(id, 'tech_id', '');
+                return;
+            }
+            if (me.role === 'Admin') {
+                showToast("Admins should use the Tech dropdown inside the card to assign to specific Techs, or drop to Open to Unassign.", "error");
+                return;
+            }
+
+            try {
+                const res = await api('/api/tickets', { method: 'PUT', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } });
+                if (res.ok) {
+                    showToast("Status updated");
+                    loadAll();
+                } else {
+                    showToast("Failed to update status. Check permissions.", "error");
+                    loadAll(); // revert
+                }
+            } catch (e) {
+                loadAll(); // revert on error
+            }
+        }
+
+        function logout() { localStorage.removeItem('helpdesk_session'); location.reload(); }
+
+        function setView(v) {
+            // Hide all views
+            ['v-kanban', 'v-table', 'v-users'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            });
+
+            // Show selected view
+            const target = document.getElementById('v-' + v);
+            if (target) target.classList.remove('hidden');
+
+            // Update nav buttons style
+            document.querySelectorAll('.v-btn').forEach(btn => {
+                if (btn.dataset.v === v) {
+                    btn.classList.add('bg-indigo-600', 'text-white', 'shadow-md');
+                    btn.classList.remove('text-indigo-600', 'hover:bg-indigo-50');
+                } else {
+                    btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-md');
+                    btn.classList.add('text-indigo-600', 'hover:bg-indigo-50');
+                }
+            });
+
+            if (v === 'users') loadUsers();
+        }
+        function setLoading(s) { document.getElementById('loader').style.width = s ? '70%' : '0%'; }
+        function openModal(m) { document.getElementById(m).classList.remove('hidden'); }
+        function closeModal(m) { document.getElementById(m).classList.add('hidden'); }
+
+        checkSession();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,40 @@
+name: Deploy Support Portal
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24'
+
+    - name: Build
+      run: |
+        GOOS=linux GOARCH=amd64 go build -o helpdesk_app main.go
+
+    - name: Deploy to VM via SSH
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USERNAME }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        source: "helpdesk_app,frontend/"
+        target: "/var/www/helpdesk"
+        
+    - name: Restart Systemd Service
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USERNAME }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        script: |
+          sudo systemctl restart helpdesk.service
+          sudo systemctl status helpdesk.service

@@ -1,0 +1,325 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "IT Helpdesk API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/api/login": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login User",
+                "parameters": [
+                    {
+                        "description": "Credentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.UserDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/tickets": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Get All Tickets",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.TicketDTO"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Update Ticket Status/Assign",
+                "parameters": [
+                    {
+                        "description": "Update Data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.UpdateTicketDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Create Ticket with Attachment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Title",
+                        "name": "title",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Description",
+                        "name": "description",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Attachment",
+                        "name": "attachment",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Delete Ticket",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Ticket ID",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/users": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get All Users",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.UserDTO"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Create New User",
+                "parameters": [
+                    {
+                        "description": "User Data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.UserDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Delete User",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "main.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "admin123"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "admin"
+                }
+            }
+        },
+        "main.TicketDTO": {
+            "type": "object",
+            "properties": {
+                "attachment_url": {
+                    "type": "string",
+                    "example": "/uploads/file.png"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Cannot connect to wifi"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "TCK-167890"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "Open"
+                },
+                "tech_id": {
+                    "type": "string",
+                    "example": "USR-2"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Internet Down"
+                },
+                "user_id": {
+                    "type": "string",
+                    "example": "USR-1"
+                }
+            }
+        },
+        "main.UpdateTicketDTO": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "TCK-167890"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "In Progress"
+                },
+                "tech_id": {
+                    "type": "string",
+                    "example": "USR-2"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.UserDTO": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "USR-123"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Siraj Shalahuddin"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "rahasia"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "62812345678"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "Admin"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "siraj"
+                }
+            }
+        }
+    }
+}

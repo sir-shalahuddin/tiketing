@@ -1,0 +1,28 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+helpdesk_app
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# SQLite databases
+*.db
+*.db-shm
+*.db-wal
+
+# Uploads directory
+uploads/*
+!uploads/.keep
+
+# Environment variables
+.env

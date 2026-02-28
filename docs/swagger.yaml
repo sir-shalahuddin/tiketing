@@ -1,0 +1,217 @@
+basePath: /
+definitions:
+  main.LoginRequest:
+    properties:
+      password:
+        example: admin123
+        type: string
+      username:
+        example: admin
+        type: string
+    type: object
+  main.TicketDTO:
+    properties:
+      attachment_url:
+        example: /uploads/file.png
+        type: string
+      created_at:
+        type: string
+      description:
+        example: Cannot connect to wifi
+        type: string
+      id:
+        example: TCK-167890
+        type: string
+      status:
+        example: Open
+        type: string
+      tech_id:
+        example: USR-2
+        type: string
+      title:
+        example: Internet Down
+        type: string
+      user_id:
+        example: USR-1
+        type: string
+    type: object
+  main.UpdateTicketDTO:
+    properties:
+      description:
+        type: string
+      id:
+        example: TCK-167890
+        type: string
+      status:
+        example: In Progress
+        type: string
+      tech_id:
+        example: USR-2
+        type: string
+      title:
+        type: string
+    type: object
+  main.UserDTO:
+    properties:
+      id:
+        example: USR-123
+        type: string
+      name:
+        example: Siraj Shalahuddin
+        type: string
+      password:
+        example: rahasia
+        type: string
+      phone:
+        example: "62812345678"
+        type: string
+      role:
+        example: Admin
+        type: string
+      username:
+        example: siraj
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  title: IT Helpdesk API
+  version: "1.0"
+paths:
+  /api/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.UserDTO'
+      summary: Login User
+      tags:
+      - Auth
+  /api/tickets:
+    delete:
+      parameters:
+      - description: Ticket ID
+        in: query
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      summary: Delete Ticket
+      tags:
+      - Tickets
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.TicketDTO'
+            type: array
+      summary: Get All Tickets
+      tags:
+      - Tickets
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Title
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Description
+        in: formData
+        name: description
+        required: true
+        type: string
+      - description: User ID
+        in: formData
+        name: user_id
+        required: true
+        type: string
+      - description: Attachment
+        in: formData
+        name: attachment
+        type: file
+      responses:
+        "201":
+          description: Created
+      summary: Create Ticket with Attachment
+      tags:
+      - Tickets
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Update Data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.UpdateTicketDTO'
+      responses:
+        "200":
+          description: OK
+      summary: Update Ticket Status/Assign
+      tags:
+      - Tickets
+  /api/users:
+    delete:
+      parameters:
+      - description: User ID
+        in: query
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      summary: Delete User
+      tags:
+      - Users
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.UserDTO'
+            type: array
+      summary: Get All Users
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User Data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/main.UserDTO'
+      responses:
+        "201":
+          description: Created
+      summary: Create New User
+      tags:
+      - Users
+swagger: "2.0"
