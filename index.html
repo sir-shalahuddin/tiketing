@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IT Helpdesk - Kanban & Table View</title>
+    <title>IT Helpdesk - Full Feature (Edit & WA)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -15,7 +15,7 @@
         .kanban-col-header { padding: 12px 16px; font-weight: 600; font-size: 13px; text-transform: uppercase; color: #5E6C84; }
         .kanban-cards { flex: 1; padding: 0 8px 12px 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 100px; }
         .kanban-cards.drag-over { background-color: #DFE1E6; border: 2px dashed #4C9AFF; }
-        .jira-card { background: white; border-radius: 4px; padding: 10px; box-shadow: 0 1px 0 rgba(9, 30, 66, 0.25); border-left: 4px solid transparent; cursor: grab; }
+        .jira-card { background: white; border-radius: 4px; padding: 10px; box-shadow: 0 1px 0 rgba(9, 30, 66, 0.25); border-left: 4px solid transparent; cursor: grab; position: relative;}
         .jira-card:active { cursor: grabbing; transform: scale(1.02); }
         
         /* Table Styles */
@@ -25,7 +25,6 @@
         .status-inprogress { background-color: #DBEAFE; color: #1E40AF; }
         .status-resolved { background-color: #D1FAE5; color: #065F46; }
 
-        /* Shared Borders */
         .border-open { border-left-color: #9CA3AF; }
         .border-assigned { border-left-color: #F59E0B; }
         .border-progress { border-left-color: #3B82F6; }
@@ -68,7 +67,7 @@
                     </button>
                 </div>
 
-                <button id="btnCreateTicket" onclick="toggleModal(true)" class="hidden bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-sm font-medium transition shadow-sm">
+                <button id="btnCreateTicket" onclick="toggleCreateModal(true)" class="hidden bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-sm font-medium transition shadow-sm">
                     + New Ticket
                 </button>
             </div>
@@ -82,7 +81,6 @@
         </header>
 
         <main class="flex-1 overflow-hidden p-6">
-            
             <div id="viewKanban" class="block h-full">
                 <div class="kanban-board">
                     <div class="kanban-col">
@@ -117,47 +115,116 @@
                                 <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="ticketTableBody" class="bg-white divide-y divide-gray-200">
-                            </tbody>
+                        <tbody id="ticketTableBody" class="bg-white divide-y divide-gray-200"></tbody>
                     </table>
                 </div>
             </div>
-
         </main>
     </div>
 
-    <div id="ticketModal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+    <div id="createTicketModal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
         <div class="bg-white rounded-lg shadow-2xl max-w-md w-full">
             <div class="p-4 border-b flex justify-between items-center">
                 <h2 class="font-bold text-lg">New Ticket</h2>
-                <button onclick="toggleModal(false)" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+                <button onclick="toggleCreateModal(false)" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <form id="ticketForm" class="p-4 space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Issue Summary</label>
-                    <input type="text" id="ticketTitle" required class="w-full border rounded p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="Describe the problem...">
+                    <input type="text" id="ticketTitle" required class="w-full border rounded p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="Brief title of the issue...">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
+                    <textarea id="ticketDesc" required rows="4" class="w-full border rounded p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="Please provide detailed information..."></textarea>
                 </div>
                 <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" onclick="toggleModal(false)" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
+                    <button type="button" onclick="toggleCreateModal(false)" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
                     <button type="submit" class="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded shadow">Submit</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <div id="editTicketModal" class="hidden fixed inset-0 bg-black/50 z-[80] flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl max-w-md w-full">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="font-bold text-lg">Edit Ticket</h2>
+                <button onclick="toggleEditModal(false)" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="editForm" class="p-4 space-y-4">
+                <input type="hidden" id="eTicketId">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Issue Summary</label>
+                    <input type="text" id="eTicketTitle" required class="w-full border rounded p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
+                    <textarea id="eTicketDesc" required rows="4" class="w-full border rounded p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="toggleEditModal(false)" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
+                    <button type="submit" class="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded shadow">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="viewTicketModal" class="hidden fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl max-w-lg w-full">
+            <div class="p-4 border-b flex justify-between items-start">
+                <div class="pr-8">
+                    <span id="vTicketId" class="text-xs font-mono font-bold text-slate-400 block mb-1"></span>
+                    <h2 id="vTicketTitle" class="font-bold text-xl text-slate-800 leading-tight"></h2>
+                </div>
+                <button onclick="toggleViewModal(false)" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="flex gap-3 mb-2">
+                    <div class="flex-1 bg-slate-50 p-3 rounded border">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Status</p>
+                        <span id="vTicketStatus" class="status-badge block w-max mt-1"></span>
+                    </div>
+                    <div class="flex-1 bg-slate-50 p-3 rounded border">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Requester</p>
+                        <div class="flex items-center justify-between mt-1">
+                            <p id="vTicketUser" class="text-sm font-semibold text-slate-700 truncate"></p>
+                            <button id="btnWaUser" class="text-green-500 hover:text-green-600 text-lg ml-2" title="Contact via WhatsApp">
+                                <i class="fa-brands fa-whatsapp"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex-1 bg-slate-50 p-3 rounded border">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Assignee</p>
+                        <p id="vTicketTech" class="text-sm font-semibold text-slate-700 mt-1"></p>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Description</label>
+                    <div id="vTicketDesc" class="bg-slate-50 border p-3 rounded text-sm text-slate-700 whitespace-pre-wrap min-h-[100px]"></div>
+                </div>
+            </div>
+            <div class="p-4 border-t bg-slate-50 flex justify-end gap-2 rounded-b-lg">
+                <button id="btnEditTicket" class="hidden px-4 py-2 text-sm bg-amber-500 hover:bg-amber-600 text-white font-medium rounded shadow">Edit Ticket</button>
+                <button onclick="toggleViewModal(false)" class="px-4 py-2 text-sm bg-white border font-medium text-slate-600 hover:bg-slate-50 rounded">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const state = {
             currentUser: null,
-            currentView: 'kanban', // Default view
+            currentView: 'kanban',
             users: [
-                { id: "u1", username: "user1", role: "User", name: "John Doe" },
-                { id: "a1", username: "admin1", role: "Admin", name: "System Admin" },
-                { id: "t1", username: "tech1", role: "Tech Support", name: "Support Agent A" }
+                // Ditambahkan field 'phone' untuk fungsi WA
+                { id: "u1", username: "user1", role: "User", name: "John Doe", phone: "6281234567890" },
+                { id: "a1", username: "admin1", role: "Admin", name: "System Admin", phone: "6289876543210" },
+                { id: "t1", username: "tech1", role: "Tech Support", name: "Support Agent A", phone: "6285555555555" }
             ],
             tickets: [
-                { id: "TCK-1001", title: "Cannot access network drive", status: "Open", userId: "u1", techId: null },
-                { id: "TCK-1002", title: "Laptop keyboard replacement", status: "Assigned", userId: "u1", techId: "t1" },
-                { id: "TCK-1003", title: "VPN connection dropping frequently", status: "In Progress", userId: "u1", techId: "t1" }
+                { id: "TCK-1001", title: "Cannot access network drive", description: "I am trying to map the Z: drive but it says network path not found. Please help, I need files for the meeting.", status: "Open", userId: "u1", techId: null },
+                { id: "TCK-1002", title: "Laptop keyboard replacement", description: "The 'Enter' and 'Space' keys are completely stuck. Spilled some coffee on it yesterday.", status: "Assigned", userId: "u1", techId: "t1" },
+                { id: "TCK-1003", title: "VPN connection dropping frequently", description: "Since the update yesterday, my VPN disconnects every 15 minutes. It's disrupting my SSH sessions.", status: "In Progress", userId: "u1", techId: "t1" }
             ]
         };
 
@@ -175,7 +242,6 @@
             renderAll();
         }
 
-        // --- VIEW TOGGLE LOGIC ---
         function switchView(viewType) {
             state.currentView = viewType;
             const btnK = document.getElementById('btnViewKanban');
@@ -196,35 +262,116 @@
             }
         }
 
-        function toggleModal(show) {
-            document.getElementById('ticketModal').classList.toggle('hidden', !show);
+        // --- WHATSAPP FUNCTION ---
+        function openWhatsApp(phone, ticketId, ticketTitle) {
+            if (!phone) {
+                alert("Nomor telepon pengguna tidak tersedia.");
+                return;
+            }
+            // Format Pesan
+            const text = encodeURIComponent(`Halo, saya menghubungi terkait tiket Helpdesk *#${ticketId}* - *${ticketTitle}*.`);
+            const url = `https://wa.me/${phone}?text=${text}`;
+            window.open(url, '_blank');
+        }
+
+        // --- MODAL CONTROLS ---
+        function toggleCreateModal(show) {
+            document.getElementById('createTicketModal').classList.toggle('hidden', !show);
             if(show) document.getElementById('ticketTitle').focus();
         }
 
+        function toggleEditModal(show, ticketId = null) {
+            const modal = document.getElementById('editTicketModal');
+            if(show && ticketId) {
+                const ticket = state.tickets.find(t => t.id === ticketId);
+                document.getElementById('eTicketId').value = ticket.id;
+                document.getElementById('eTicketTitle').value = ticket.title;
+                document.getElementById('eTicketDesc').value = ticket.description;
+                toggleViewModal(false); // Tutup view detail saat buka edit
+            }
+            modal.classList.toggle('hidden', !show);
+        }
+
+        function toggleViewModal(show) {
+            document.getElementById('viewTicketModal').classList.toggle('hidden', !show);
+        }
+
+        function viewTicketDetails(ticketId) {
+            const ticket = state.tickets.find(t => t.id === ticketId);
+            if(!ticket) return;
+
+            const requester = state.users.find(u => u.id === ticket.userId);
+            const tech = ticket.techId ? state.users.find(u => u.id === ticket.techId).name : 'Not Assigned';
+            const statusClass = `status-${ticket.status.toLowerCase().replace(/\s/g, '')}`;
+
+            document.getElementById('vTicketId').innerText = ticket.id;
+            document.getElementById('vTicketTitle').innerText = ticket.title;
+            document.getElementById('vTicketDesc').innerText = ticket.description;
+            document.getElementById('vTicketUser').innerText = requester.name;
+            document.getElementById('vTicketTech').innerText = tech;
+            
+            // Set WhatsApp Action
+            const btnWa = document.getElementById('btnWaUser');
+            btnWa.onclick = () => openWhatsApp(requester.phone, ticket.id, ticket.title);
+
+            // Set Badge
+            const badge = document.getElementById('vTicketStatus');
+            badge.className = `status-badge ${statusClass} block w-max mt-1`;
+            badge.innerText = ticket.status;
+
+            // Logic Edit Button (Hanya Admin atau Pembuat Tiket yang bisa edit)
+            const btnEdit = document.getElementById('btnEditTicket');
+            if(state.currentUser.role === 'Admin' || state.currentUser.id === ticket.userId) {
+                btnEdit.classList.remove('hidden');
+                btnEdit.onclick = () => toggleEditModal(true, ticket.id);
+            } else {
+                btnEdit.classList.add('hidden');
+            }
+
+            toggleViewModal(true);
+        }
+
+        // --- SUBMIT NEW TICKET ---
         document.getElementById('ticketForm').onsubmit = function(e) {
             e.preventDefault();
             const newId = "TCK-" + (1000 + state.tickets.length + 1);
             state.tickets.push({
                 id: newId,
                 title: document.getElementById('ticketTitle').value,
+                description: document.getElementById('ticketDesc').value,
                 status: "Open",
                 userId: state.currentUser.id,
                 techId: null
             });
             this.reset();
-            toggleModal(false);
+            toggleCreateModal(false);
             renderAll();
+        };
+
+        // --- SUBMIT EDIT TICKET ---
+        document.getElementById('editForm').onsubmit = function(e) {
+            e.preventDefault();
+            const id = document.getElementById('eTicketId').value;
+            const ticket = state.tickets.find(t => t.id === id);
+            
+            if(ticket) {
+                ticket.title = document.getElementById('eTicketTitle').value;
+                ticket.description = document.getElementById('eTicketDesc').value;
+                renderAll();
+                
+                // Opsional: Buka kembali view modal dengan data baru
+                toggleEditModal(false);
+                viewTicketDetails(id);
+            }
         };
 
         function getSafeId(status) { return status.replace(/\s+/g, ''); }
 
-        // --- MASTER RENDER ---
         function renderAll() {
             renderKanban();
             renderTable();
         }
 
-        // --- RENDER KANBAN ---
         function renderKanban() {
             ['Open', 'Assigned', 'In Progress', 'Resolved'].forEach(status => {
                 const safeId = getSafeId(status);
@@ -244,7 +391,7 @@
                                 ${techName !== 'Unassigned' ? techName.charAt(0) : '?'}
                             </div>
                         </div>
-                        <h4 class="text-sm text-slate-700 leading-tight">${t.title}</h4>
+                        <h4 class="text-sm text-slate-700 leading-tight hover:text-blue-600 cursor-pointer" onclick="viewTicketDetails('${t.id}')">${t.title}</h4>
                     </div>
                 `;
                 
@@ -257,7 +404,6 @@
             });
         }
 
-        // --- RENDER TABLE ---
         function renderTable() {
             const tbody = document.getElementById('ticketTableBody');
             tbody.innerHTML = '';
@@ -278,31 +424,31 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${requester}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${tech}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex justify-end gap-2 items-center h-[53px]">
+                            <button onclick="viewTicketDetails('${t.id}')" class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded transition text-xs">View</button>
                             ${canEdit ? `
-                                <select onchange="updateStatusFromTable('${t.id}', this.value)" class="border rounded text-xs p-1 outline-none focus:ring-1 focus:ring-blue-500">
+                                <select onchange="updateStatusFromTable('${t.id}', this.value)" class="border rounded text-xs p-1 outline-none focus:ring-1 focus:ring-blue-500 h-[26px]">
                                     <option value="Open" ${t.status === 'Open' ? 'selected' : ''}>Open</option>
                                     <option value="Assigned" ${t.status === 'Assigned' ? 'selected' : ''}>Assigned</option>
                                     <option value="In Progress" ${t.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
                                     <option value="Resolved" ${t.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
                                 </select>
-                            ` : '<span class="text-gray-300 text-xs italic">Read Only</span>'}
+                            ` : ''}
                         </td>
                     </tr>
                 `;
             });
         }
 
-        // --- UPDATE TICKET LOGIC (Shared) ---
         function updateStatusFromTable(ticketId, newStatus) {
             const ticket = state.tickets.find(t => t.id === ticketId);
             if (ticket) {
                 ticket.status = newStatus;
-                renderAll(); // Updates both table and kanban in the background
+                renderAll(); 
             }
         }
 
-        // --- DRAG & DROP LOGIC (Kanban) ---
+        // --- DRAG & DROP LOGIC ---
         function dragStart(ev) {
             const card = ev.target.closest('.jira-card');
             const ticket = state.tickets.find(x => x.id === card.id);
@@ -341,7 +487,7 @@
             
             if(ticket && ticket.status !== newStatus) {
                 ticket.status = newStatus;
-                renderAll(); // Updates both kanban and table
+                renderAll();
             }
         }
     </script>
