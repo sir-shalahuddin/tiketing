@@ -9,46 +9,52 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: '1.24'
 
-    - name: Build
+    - name: Build Go Application
       run: |
+        # Build binary untuk Linux AMD64
         GOOS=linux GOARCH=amd64 go build -o helpdesk_app main.go
 
-    - name: Prepare Target Directory
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.VM_HOST }}
-        username: ${{ secrets.VM_USERNAME }}
-        key: ${{ secrets.VM_SSH_KEY }}
-        script: |
-          # Buat folder induk jika belum ada
-          sudo mkdir -p /var/www/helpdesk
-          # Berikan kepemilikan penuh ke user yang digunakan untuk login
-          sudo chown -R ${{ secrets.VM_USERNAME }}:${{ secrets.VM_USERNAME }} /var/www/helpdesk
-          # Pastikan izin aksesnya (read/write/execute)
-          sudo chmod -R 755 /var/www/helpdesk
-
-    - name: Deploy to VM via SSH
+    - name: Upload to Landing Zone (Staging)
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.VM_HOST }}
         username: ${{ secrets.VM_USERNAME }}
         key: ${{ secrets.VM_SSH_KEY }}
+        # Kita kirim ke folder 'staging' di home directory user
         source: "helpdesk_app,frontend/"
-        target: "/var/www/helpdesk"
-        
-    - name: Restart Systemd Service
+        target: "/home/${{ secrets.VM_USERNAME }}/support"
+        strip_components: 0
+
+    - name: Move to Production & Restart Service
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.VM_HOST }}
         username: ${{ secrets.VM_USERNAME }}
         key: ${{ secrets.VM_SSH_KEY }}
         script: |
+          # 1. Pastikan folder tujuan ada
+          sudo mkdir -p /var/www/helpdesk
+          
+          # 2. Pindahkan file dari staging ke folder produksi
+          # Menggunakan sudo agar tidak ada masalah permission
+          sudo cp -r /home/${{ secrets.VM_USERNAME }}/support/* /var/www/helpdesk/
+          
+          # 3. Bersihkan folder staging
+          rm -rf /home/${{ secrets.VM_USERNAME }}/support
+          
+          # 4. Atur ownership (opsional, sesuaikan dengan user nginx/app kamu)
+          sudo chown -R ${{ secrets.VM_USERNAME }}:${{ secrets.VM_USERNAME }} /var/www/helpdesk
+          
+          # 5. Restart service systemd
           sudo systemctl restart helpdesk.service
-          sudo systemctl status helpdesk.service
+          
+          # 6. Cek status singkat
+          sudo systemctl is-active helpdesk.service
